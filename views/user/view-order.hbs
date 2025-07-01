@@ -1,0 +1,101 @@
+<section>
+    <div class="container mt-5">
+        <h2 class="text-center mb-4">YOUR ORDER DETAILS</h2>
+        {{#if orders.length}}
+            {{#each orders}}
+            <div class="card mb-4">
+                <div class="card-header bg-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="mb-0">Order #{{this._id}}</h5>
+                            <small class="text-muted">{{this.date}}</small>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <span class="badge {{#if (eq this.status 'Delivered')}}bg-success{{else}}bg-warning{{/if}} text-white mr-2">{{this.status}}</span>
+                            {{#unless (eq this.status 'Delivered')}}
+                            <button onclick="cancelOrder('{{this._id}}')" class="btn btn-sm btn-danger">Cancel Order</button>
+                            {{/unless}}
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Delivery Address</h6>
+                            <p class="mb-1">{{this.deliveryDetails.fullName}}</p>
+                            <p class="mb-1">{{this.deliveryDetails.address}}</p>
+                            <p class="mb-1">{{this.deliveryDetails.city}}, {{this.deliveryDetails.pincode}}</p>
+                            <p class="mb-1">Phone: {{this.deliveryDetails.phone}}</p>
+                        </div>
+                        <div class="col-md-6 text-md-right">
+                            <h6>Order Total</h6>
+                            <h4>₹{{this.totalAmount}}</h4>
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <h6>Products</h6>
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Item</th>
+                                        <th>Name</th>
+                                        <th>Quantity</th>
+                                        <th class="text-right">Price</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {{#each this.products}}
+                                    <tr>
+                                        <td><img src="{{this.product.image}}" alt="{{this.product.name}}" style="width: 50px; height: 50px;"></td>
+                                        <td>{{this.product.name}}</td>
+                                        <td>{{this.quantity}}</td>
+                                        <td class="text-right">₹{{this.product.price}}</td>
+                                    </tr>
+                                    {{/each}}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {{/each}}
+        {{else}}
+            <div class="text-center">
+                <h4>No orders found</h4>
+                <a href="/" class="btn btn-primary mt-3">Continue Shopping</a>
+            </div>
+        {{/if}}
+    </div>
+</section>
+
+<style>
+    .bg-success {
+        background-color: #28a745;
+    }
+    .bg-warning {
+        background-color: #ffc107;
+        color: #000;
+    }
+</style>
+
+<script>
+    function cancelOrder(orderId) {
+        if (confirm('Are you sure you want to cancel this order?')) {
+            $.ajax({
+                url: '/cancel-order/' + orderId,
+                method: 'POST',
+                success: (response) => {
+                    if (response.status) {
+                        location.reload()
+                    } else {
+                        alert('Failed to cancel order')
+                    }
+                },
+                error: () => {
+                    alert('Failed to cancel order')
+                }
+            })
+        }
+    }
+</script>
