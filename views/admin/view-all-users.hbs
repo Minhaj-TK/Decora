@@ -1,0 +1,71 @@
+<section>
+    <div class="container mt-5">
+        <h2 class="text-center mb-4">ALL USERS</h2>
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table" id="usersTable">
+                        <thead class="thead-dark">
+                            <tr>
+                                <th scope="col">No</th>
+                                <th scope="col">Name</th>
+                                <th scope="col">Email</th>
+                                <th scope="col">Join Date</th>
+                                <th scope="col">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {{#each usersList}}
+                            <tr>
+                                <th scope="row">{{add @index 1}}</th>
+                                <td>{{this.Name}}</td>
+                                <td>{{this.Email}}</td>
+                                <td>{{formatDate this.joinDate}}</td>
+                                <td>
+                                    <button onclick="removeUser('{{this._id}}')" class="btn btn-danger btn-sm">Remove</button>
+                                </td>
+                            </tr>
+                            {{/each}}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+    $(document).ready(function() {
+        $('#usersTable').DataTable({
+            searching: true,
+            ordering: true,
+            paging: true,
+            pageLength: 10,
+            lengthMenu: [[5, 10, 25, 50, -1], [5, 10, 25, 50, "All"]],
+            language: {
+                search: "Search:",
+                lengthMenu: "Show _MENU_ entries",
+                info: "Showing _START_ to _END_ of _TOTAL_ entries"
+            }
+        });
+    });
+
+    function removeUser(userId) {
+        if (confirm('Are you sure you want to remove this user?')) {
+            $.ajax({
+                url: '/admin/remove-user/' + userId,
+                method: 'DELETE',
+                success: function(response) {
+                    if (response.status) {
+                        location.reload();
+                    } else {
+                        alert('Failed to remove user');
+                    }
+                },
+                error: function() {
+                    alert('Failed to remove user');
+                }
+            });
+        }
+    }
+</script>
