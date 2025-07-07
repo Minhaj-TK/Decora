@@ -10,7 +10,6 @@ var app = express();
 var fileUpload = require('express-fileupload');
 var db = require('./config/connection');
 var session = require('express-session');
-const MongoStore = require('connect-mongo');
 
 // Configure express-handlebars
 var hbs = exphbs.create({
