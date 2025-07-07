@@ -29,8 +29,28 @@ router.get('/login', (req, res) => {
   if (req.session.loggedIn) {
     res.redirect('/')
   } else {
-    res.render('user/login', { "loginErr": req.session.loginErr })
+    res.render('user/login', { 
+      "loginErr": req.session.loginErr,
+      "message": req.session.message
+    })
     req.session.loginErr = false
+    req.session.message = null
+  }
+})
+
+router.get('/add-to-cart/:id', async (req,res)=>{
+  if (!req.session.loggedIn) {
+    req.session.message = 'Please login to add items to cart'
+    res.status(401).json({ error: 'Please login to add items to cart', redirect: '/login' })
+    return
+  }
+  try {
+    await userHelpers.addToCart(req.params.id, req.session.user._id)
+    let cartCount = await userHelpers.getCartCount(req.session.user._id)
+    res.json({status: true, cartCount: cartCount})
+  } catch (error) {
+    console.error('Error adding to cart:', error)
+    res.status(500).json({status: false, error: error.message})
   }
 })
 
@@ -111,9 +131,13 @@ router.get('/get-cart-total', verifyLogin, async (req, res) => {
 });
 
 router.get('/place-order', verifyLogin,async (req, res) => {
-  let total=await userHelpers.getCartTotal(req.session.user._id)
+  let total=await userHelpers.getTotalAmount(req.session.user._id)
   res.render('user/place-order', { total, user: req.session.user })
 })
+
+router.get('/order-success', verifyLogin, (req, res) => {
+  res.render('user/order-success', { user: req.session.user });
+});
 
 router.post('/place-order', verifyLogin, async (req, res) => {
   try {
@@ -147,16 +171,6 @@ router.post('/place-order', verifyLogin, async (req, res) => {
   }
 })
 
-router.get('/add-to-cart/:id',(req,res)=>{
-  userHelpers.addToCart(req.params.id,req.session.user._id).then(async () => {
-    let cartCount = await userHelpers.getCartCount(req.session.user._id)
-    res.json({status: true, cartCount: cartCount})
-  }).catch(error => {
-    console.error('Error adding to cart:', error)
-    res.json({status: false, error: error})
-  })
-})
-
 router.get('/remove-from-cart/:id', verifyLogin, (req, res) => {
   console.log("api call");
   userHelpers.removeFromCart(req.params.id, req.session.user._id).then(() => {
@@ -167,20 +181,6 @@ router.get('/remove-from-cart/:id', verifyLogin, (req, res) => {
   })
 })
 
-router.get('/order-success', verifyLogin, (req, res) => {
-  res.render('user/order-success', { user: req.session.user });
-});
-
-router.get('/view-order', verifyLogin, async (req, res) => {
-  try {
-    const orders = await userHelpers.getUserOrders(req.session.user._id);
-    res.render('user/view-order', { orders, user: req.session.user });
-  } catch (error) {
-    console.error('Error fetching orders:', error);
-    res.render('user/view-order', { error: 'Unable to fetch orders', user: req.session.user });
-  }
-});
-
 router.post('/change-product-quantity', (req, res, next) =>{
   userHelpers.changeProductQuantity(req.body).then((response)=>{
     res.json({status: true})
@@ -188,5 +188,27 @@ router.post('/change-product-quantity', (req, res, next) =>{
     res.json({status: false, error: error.message})
   })
 })
+
+router.get('/view-order', verifyLogin, async (req, res) => {
+  try {
+    const orders = await userHelpers.getUserOrders(req.session.user._id);
+    res.render('user/view-order', { user: req.session.user, orders });
+  } catch (error) {
+    console.error('Error fetching orders:', error);
+    res.render('user/view-order', { user: req.session.user, error: 'Failed to fetch orders' });
+  }
+});
+
+router.delete('/remove-order/:id', verifyLogin, async (req, res) => {
+  try {
+    const orderId = req.params.id;
+    const userId = req.session.user._id;
+    await userHelpers.removeOrder(orderId, userId);
+    res.json({ status: true });
+  } catch (error) {
+    console.error('Error removing order:', error);
+    res.status(500).json({ status: false, error: error.message || 'Error removing order' });
+  }
+});
 
 module.exports = router;
