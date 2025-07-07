@@ -4,12 +4,17 @@ var productHelper = require('../helpers/product-helpers');
 const { PRODUCT_COLLECTION } = require('../config/collections');
 
 /* GET users listing. */
-router.get('/', async function (req, res, next) {
+router.get('/', function(req, res) {
+  res.redirect('/admin/home');
+});
+
+router.get('/view-all-products', async function(req, res) {
   try {
     const products = await productHelper.getAllProducts();
-    res.render('admin/view-products', { admin: true, products });
+    res.render('admin/view-all-products', { admin: true, products });
   } catch (error) {
-    next(error);
+    console.error('Error fetching products:', error);
+    res.status(500).send('Error loading products');
   }
 });
 router.get('/add-product', function (req, res) {
@@ -168,6 +173,111 @@ router.post('/edit-product/:id', (req, res) => {
   } catch (error) {
     console.error('Error updating product:', error);
     res.status(500).send('Error updating product');
+  }
+});
+
+router.get('/home', function(req, res) {
+  res.render('admin/home', { admin: true, isHome: true });
+});
+
+router.get('/view-all-orders', async function(req, res) {
+  try {
+    const db = require('../config/connection');
+    const collection = require('../config/collections');
+    const orders = await db.get().collection(collection.ORDER_COLLECTION)
+      .aggregate([
+        {
+          $lookup: {
+            from: collection.PRODUCT_COLLECTION,
+            localField: 'products.item',
+            foreignField: '_id',
+            as: 'productDetails'
+          }
+        },
+        { $sort: { date: -1 } }
+      ]).toArray();
+
+    // Process orders to include product details and format date
+    orders.forEach(order => {
+      order.date = new Date(order.date).toLocaleDateString();
+      order.products = order.products.map(prod => {
+        const productDetail = order.productDetails.find(p => p._id.toString() === prod.item.toString());
+        return {
+          name: productDetail.name,
+          price: productDetail.price,
+          quantity: prod.quantity,
+          image: productDetail.image,
+          total: prod.quantity * productDetail.price
+        };
+      });
+      delete order.productDetails;
+    });
+
+    res.render('admin/view-all-orders', { admin: true, isOrders: true, ordersList: orders });
+  } catch (error) {
+    console.error('Error fetching orders:', error);
+    res.render('admin/view-all-orders', { admin: true, isOrders: true, error: 'Failed to load orders' });
+  }
+});
+
+router.post('/update-order-status', async function(req, res) {
+  try {
+    const { orderId, status } = req.body;
+    const db = require('../config/connection');
+    const collection = require('../config/collections');
+    const { ObjectId } = require('mongodb');
+    
+    await db.get().collection(collection.ORDER_COLLECTION).updateOne(
+      { _id: new ObjectId(orderId) },
+      { $set: { status: status } }
+    );
+    
+    res.json({ status: true });
+  } catch (error) {
+    console.error('Error updating order status:', error);
+    res.json({ status: false, error: 'Failed to update order status' });
+  }
+});
+
+router.get('/view-all-users', async function(req, res) {
+  try {
+    const db = require('../config/connection');
+    const collection = require('../config/collections');
+    const users = await db.get().collection(collection.USER_COLLECTION)
+      .find()
+      .sort({ joinDate: -1 })
+      .toArray();
+
+    res.render('admin/view-all-users', { admin: true, isUsers: true, usersList: users });
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    res.render('admin/view-all-users', { admin: true, isUsers: true, error: 'Failed to load users' });
+  }
+});
+
+router.delete('/remove-user/:id', async function(req, res) {
+  try {
+    const db = require('../config/connection');
+    const collection = require('../config/collections');
+    const { ObjectId } = require('mongodb');
+    
+    await db.get().collection(collection.USER_COLLECTION).deleteOne(
+      { _id: new ObjectId(req.params.id) }
+    );
+    
+    res.json({ status: true });
+  } catch (error) {
+    console.error('Error removing user:', error);
+    res.json({ status: false, error: 'Failed to remove user' });
+  }
+});
+
+router.get('/products', async function(req, res, next) {
+  try {
+    const products = await productHelper.getAllProducts();
+    res.render('admin/view-all-products', { admin: true, products, isProducts: true });
+  } catch (error) {
+    next(error);
   }
 });
 
