@@ -8,7 +8,7 @@ const state = {
 module.exports.connect = async function () {
     const maxRetries = 3;
     let retryCount = 0;
-    const url = 'mongodb://127.0.0.1:27017';
+    const url = 'mongodb+srv://decora:Decora%40123@cluster0.g3iosmw.mongodb.net/?retryWrites=true&w=majority&tls=true';
     const dbname = 'shopping';
     const options = {
         serverSelectionTimeoutMS: 10000,
